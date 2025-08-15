@@ -1,0 +1,440 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  ADVISOR
+  CLIENT
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum PetStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  DELIVERED
+}
+
+enum InterestLevel {
+  COLD
+  WARM
+  HOT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  LOST
+  CONVERTED
+}
+
+enum ReservationStatus {
+  PENDING
+  PAID
+  CANCELLED
+  CONVERTED
+}
+
+enum SaleStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIAL
+}
+
+enum DeliveryMethod {
+  PICKUP
+  SHIPPING
+}
+
+enum DeliveryStatus {
+  SCHEDULED
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum VaccinationStatus {
+  DUE
+  SCHEDULED
+  DONE
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+enum PaymentStatusEnum {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum BannerTarget {
+  ALL
+  CLIENTS
+  ADVISORS
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  INAPP
+}
+
+// Core Models
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  role         Role
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  advisor       Advisor?
+  client        Client?
+  leads         Lead[]
+  reservations  Reservation[]
+  sales         Sale[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Advisor {
+  id     String @id @default(cuid())
+  userId String @unique
+  code   String @unique
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("advisors")
+}
+
+model Client {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  documentId String?
+  city       String?
+  address    String?
+  notes      String?
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  sales        Sale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
+}
+
+model Breed {
+  id   String @id @default(cuid())
+  name String @unique
+
+  // Relations
+  pets        Pet[]
+  interestedLeads Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("breeds")
+}
+
+model Pet {
+  id        String    @id @default(cuid())
+  name      String
+  breedId   String
+  color     String
+  sex       Sex
+  birthDate DateTime
+  photoUrl  String?
+  price     Decimal
+  status    PetStatus @default(AVAILABLE)
+  notes     String?
+
+  // Relations
+  breed          Breed            @relation(fields: [breedId], references: [id])
+  reservations   Reservation[]
+  sales          Sale[]
+  vaccinations   PetVaccination[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([breedId])
+  @@map("pets")
+}
+
+model Lead {
+  id               String        @id @default(cuid())
+  name             String
+  email            String
+  phone            String
+  city             String?
+  source           String?
+  interestBreedId  String?
+  interestLevel    InterestLevel @default(COLD)
+  status           LeadStatus    @default(NEW)
+  nextContactAt    DateTime?
+  advisorId        String
+  notes            String?
+
+  // Relations
+  interestBreed Breed?        @relation(fields: [interestBreedId], references: [id])
+  advisor       User          @relation(fields: [advisorId], references: [id])
+  reservations  Reservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, advisorId])
+  @@index([nextContactAt])
+  @@map("leads")
+}
+
+model Reservation {
+  id            String            @id @default(cuid())
+  leadId        String?
+  petId         String?
+  clientId      String?
+  advisorId     String
+  amount        Decimal
+  status        ReservationStatus @default(PENDING)
+  reservedAt    DateTime          @default(now())
+  paymentMethod String?
+  paymentRef    String?
+
+  // Relations
+  lead     Lead?     @relation(fields: [leadId], references: [id])
+  pet      Pet?      @relation(fields: [petId], references: [id])
+  client   Client?   @relation(fields: [clientId], references: [id])
+  advisor  User      @relation(fields: [advisorId], references: [id])
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([advisorId])
+  @@map("reservations")
+}
+
+model Sale {
+  id            String        @id @default(cuid())
+  clientId      String
+  petId         String
+  advisorId     String
+  price         Decimal
+  saleDate      DateTime      @default(now())
+  status        SaleStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID)
+  invoiceId     String?
+
+  // Relations
+  client   Client    @relation(fields: [clientId], references: [id])
+  pet      Pet       @relation(fields: [petId], references: [id])
+  advisor  User      @relation(fields: [advisorId], references: [id])
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id])
+  delivery Delivery?
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([advisorId])
+  @@index([saleDate])
+  @@map("sales")
+}
+
+model Delivery {
+  id            String         @id @default(cuid())
+  saleId        String         @unique
+  estimatedDate DateTime
+  method        DeliveryMethod
+  status        DeliveryStatus @default(SCHEDULED)
+  trackingCode  String?
+  address       String?
+  notes         String?
+
+  // Relations
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([estimatedDate])
+  @@index([status])
+  @@map("deliveries")
+}
+
+model Vaccine {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  offsetWeeks Int // weeks from birth for first reminder
+
+  // Relations
+  petVaccinations PetVaccination[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vaccines")
+}
+
+model PetVaccination {
+  id            String            @id @default(cuid())
+  petId         String
+  vaccineId     String
+  scheduledDate DateTime
+  completedDate DateTime?
+  status        VaccinationStatus @default(DUE)
+  notes         String?
+
+  // Relations
+  pet     Pet     @relation(fields: [petId], references: [id], onDelete: Cascade)
+  vaccine Vaccine @relation(fields: [vaccineId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([petId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@map("pet_vaccinations")
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  saleId    String    @unique
+  number    String    @unique
+  pdfUrl    String?
+  subtotal  Decimal
+  taxes     Decimal
+  total     Decimal
+  issuedAt  DateTime  @default(now())
+  sentAt    DateTime?
+
+  // Relations
+  sales Sale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoices")
+}
+
+model Payment {
+  id             String              @id @default(cuid())
+  saleId         String?
+  reservationId  String?
+  amount         Decimal
+  method         PaymentMethod
+  status         PaymentStatusEnum   @default(PENDING)
+  transactionRef String?
+  paidAt         DateTime?
+
+  // Relations
+  sale        Sale?        @relation(fields: [saleId], references: [id])
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("payments")
+}
+
+model Banner {
+  id         String       @id @default(cuid())
+  title      String
+  body       String
+  imageUrl   String?
+  linkUrl    String?
+  target     BannerTarget @default(ALL)
+  activeFrom DateTime
+  activeTo   DateTime
+  isActive   Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([target, activeFrom, activeTo])
+  @@map("banners")
+}
+
+model Notification {
+  id      String              @id @default(cuid())
+  userId  String
+  type    String
+  channel NotificationChannel
+  payload Json
+  sentAt  DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+
+  // Relations
+  actor User @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
