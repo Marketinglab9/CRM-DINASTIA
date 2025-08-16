@@ -26,7 +26,7 @@ export default withAuth(
     }
 
     // Dashboard routes for ADMIN and ADVISOR
-    if (pathname.startsWith('/dashboard') && ![Role.ADMIN, Role.ADVISOR].includes(userRole)) {
+    if (pathname.startsWith('/dashboard') && userRole !== Role.ADMIN && userRole !== Role.ADVISOR) {
       return NextResponse.redirect(new URL('/client', req.url))
     }
 
@@ -79,7 +79,6 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
      */
     '/((?!_next/static|_next/image|favicon.ico|images|icons).*)',
   ],
