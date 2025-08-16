@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       .filter(Boolean)
       .map(invoice => ({
         ...invoice,
-        sale: client.sales.find(sale => sale.invoiceId === invoice.id)
+        sale: client.sales.find(sale => sale.invoiceId === invoice!.id)
       }))
 
     const response = {

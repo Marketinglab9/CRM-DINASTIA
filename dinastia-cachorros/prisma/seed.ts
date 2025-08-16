@@ -1,4 +1,4 @@
-import { PrismaClient, Role, Sex, PetStatus, InterestLevel, LeadStatus, BannerTarget, VaccinationStatus, SaleStatus, PaymentStatusEnum, DeliveryMethod, DeliveryStatus } from '@prisma/client'
+import { PrismaClient, Role, Sex, PetStatus, InterestLevel, LeadStatus, BannerTarget, VaccinationStatus, SaleStatus, PaymentStatus, DeliveryMethod, DeliveryStatus } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -414,7 +414,7 @@ async function main() {
       price: 2500000, // 2.5M COP
       saleDate: new Date('2024-02-15'),
       status: SaleStatus.DELIVERED,
-      paymentStatus: PaymentStatusEnum.PAID,
+      paymentStatus: PaymentStatus.PAID,
     },
   })
 

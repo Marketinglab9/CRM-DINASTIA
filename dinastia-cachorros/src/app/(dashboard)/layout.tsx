@@ -38,7 +38,7 @@ export default function DashboardLayout({
   }
 
   // Only allow ADMIN and ADVISOR roles
-  if (![Role.ADMIN, Role.ADVISOR].includes(session.user.role)) {
+  if (session.user.role !== Role.ADMIN && session.user.role !== Role.ADVISOR) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
