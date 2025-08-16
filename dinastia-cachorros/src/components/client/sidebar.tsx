@@ -51,7 +51,7 @@ const navItems: NavItem[] = [
   },
   {
     title: 'Vacunas',
-    href: '/client/vaccinations',
+    href: '/client/vaccines',
     icon: Syringe,
   },
   {

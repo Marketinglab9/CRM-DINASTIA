@@ -18,9 +18,9 @@ export default function ClientLayout({
     if (status === 'unauthenticated') {
       router.push('/login')
     } else if (status === 'authenticated' && session?.user) {
-      // Redirect non-clients to dashboard
+      // Redirect non-clients to login
       if (session.user.role !== Role.CLIENT) {
-        router.push('/dashboard')
+        router.push('/login')
       }
     }
   }, [session, status, router])

@@ -1,10 +1,12 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Heart,
   Calendar,
@@ -16,85 +18,26 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react'
 
-// Mock data for demonstration
-const clientData = {
-  name: 'Ana López',
-  email: 'ana.lopez@email.com',
-  phone: '+57 300 456 7890',
-  city: 'Bogotá',
-  address: 'Calle 123 #45-67',
-  registrationDate: '2024-01-15',
+async function fetchClientData() {
+  const response = await fetch('/api/clients/me')
+  if (!response.ok) {
+    throw new Error('Failed to fetch client data')
+  }
+  return response.json()
 }
 
-const myPets = [
-  {
-    id: 1,
-    name: 'Max',
-    breed: 'Golden Retriever',
-    birthDate: '2024-01-15',
-    photoUrl: '/images/pets/max.jpg',
-    sex: 'Macho',
-    color: 'Dorado',
-    status: 'delivered',
-    purchaseDate: '2024-02-20',
-    nextVaccine: '2024-12-25',
-    vaccinationProgress: 75,
+async function fetchUpcomingVaccinations() {
+  const response = await fetch('/api/pet-vaccinations?owner=me')
+  if (!response.ok) {
+    throw new Error('Failed to fetch vaccinations')
   }
-]
-
-const upcomingVaccinations = [
-  {
-    id: 1,
-    petName: 'Max',
-    vaccineName: 'Refuerzo Anual DHPP',
-    scheduledDate: '2024-12-25',
-    status: 'due',
-    description: 'Refuerzo anual de DHPP',
-  },
-  {
-    id: 2,
-    petName: 'Max',
-    vaccineName: 'Refuerzo Antirrábica',
-    scheduledDate: '2025-01-15',
-    status: 'scheduled',
-    description: 'Refuerzo anual antirrábica',
-  },
-]
-
-const recentInvoices = [
-  {
-    id: 1,
-    number: 'DIN1001',
-    petName: 'Max',
-    amount: 2500000,
-    date: '2024-02-20',
-    status: 'paid',
-  }
-]
-
-const availableDownloads = [
-  {
-    id: 1,
-    name: 'Guía de Cuidados - Max',
-    type: 'care-guide',
-    description: 'Guía completa de cuidados para Golden Retriever',
-  },
-  {
-    id: 2,
-    name: 'Factura DIN1001',
-    type: 'invoice',
-    description: 'Factura de compra de Max',
-  },
-  {
-    id: 3,
-    name: 'Certificado de Vacunación',
-    type: 'vaccination',
-    description: 'Registro de vacunas aplicadas',
-  },
-]
+  const data = await response.json()
+  return data.filter((v: any) => v.status === 'DUE' || v.status === 'SCHEDULED').slice(0, 3)
+}
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -157,6 +100,50 @@ const getVaccinationStatusBadge = (status: string) => {
 }
 
 export default function ClientDashboard() {
+  const {
+    data: clientData,
+    isLoading: clientLoading,
+    error: clientError,
+    refetch: refetchClient
+  } = useQuery({
+    queryKey: ['client-data'],
+    queryFn: fetchClientData,
+  })
+
+  const {
+    data: upcomingVaccinations,
+    isLoading: vaccinationsLoading,
+    error: vaccinationsError,
+    refetch: refetchVaccinations
+  } = useQuery({
+    queryKey: ['upcoming-vaccinations'],
+    queryFn: fetchUpcomingVaccinations,
+  })
+
+  if (clientError || vaccinationsError) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle>Error al cargar datos</CardTitle>
+            <CardDescription>
+              No se pudieron cargar tus datos. Por favor, intenta de nuevo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => {
+              refetchClient()
+              refetchVaccinations()
+            }}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -164,7 +151,11 @@ export default function ClientDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mi Portal</h1>
           <p className="text-muted-foreground">
-            Bienvenido, {clientData.name}
+            {clientLoading ? (
+              <Skeleton className="h-5 w-48" />
+            ) : (
+              `Bienvenido, ${clientData?.profile?.user?.name || 'Usuario'}`
+            )}
           </p>
         </div>
       </div>
@@ -178,79 +169,128 @@ export default function ClientDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{clientData.email}</span>
+          {clientLoading ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{clientData.phone}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{clientData.city}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Cliente desde {formatDate(clientData.registrationDate)}</span>
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{clientData?.profile?.user?.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{clientData?.profile?.user?.phone}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{clientData?.profile?.city || 'No especificado'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Cliente desde {clientData?.profile?.user?.createdAt ? formatDate(clientData.profile.user.createdAt) : ''}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* My Pets */}
       <div className="grid gap-4">
         <h2 className="text-2xl font-semibold">Mis Mascotas</h2>
-        {myPets.map((pet) => (
-          <Card key={pet.id}>
+        {clientLoading ? (
+          <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={pet.photoUrl} alt={pet.name} />
-                  <AvatarFallback>{pet.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <CardTitle className="text-xl">{pet.name}</CardTitle>
-                  <CardDescription className="text-base">
-                    {pet.breed} • {pet.sex} • {pet.color}
-                  </CardDescription>
-                  <p className="text-sm text-muted-foreground">
-                    {calculateAge(pet.birthDate)} • Nacido el {formatDate(pet.birthDate)}
-                  </p>
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-40" />
                 </div>
-                <Badge variant="outline">
-                  Entregado
-                </Badge>
+                <Skeleton className="h-6 w-20" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Progreso de Vacunación</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Completado</span>
-                      <span>{pet.vaccinationProgress}%</span>
-                    </div>
-                    <Progress value={pet.vaccinationProgress} className="h-2" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Próxima Vacuna</h4>
-                  <div className="flex items-center gap-2">
-                    <Syringe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{formatDate(pet.nextVaccine)}</span>
-                  </div>
-                </div>
-              </div>
+          </Card>
+        ) : clientData?.pets?.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Heart className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No tienes mascotas registradas</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Cuando realices una compra, tus mascotas aparecerán aquí.
+              </p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          clientData?.pets?.map((pet: any) => {
+            const vaccinationProgress = pet.vaccinations ? 
+              Math.round((pet.vaccinations.filter((v: any) => v.status === 'DONE').length / pet.vaccinations.length) * 100) : 0
+            const nextVaccination = pet.vaccinations?.find((v: any) => v.status === 'DUE' || v.status === 'SCHEDULED')
+            
+            return (
+              <Card key={pet.id}>
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={pet.photoUrl} alt={pet.name} />
+                      <AvatarFallback>{pet.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <CardTitle className="text-xl">{pet.name}</CardTitle>
+                      <CardDescription className="text-base">
+                        {pet.breed?.name} • {pet.sex === 'MALE' ? 'Macho' : 'Hembra'} • {pet.color}
+                      </CardDescription>
+                      <p className="text-sm text-muted-foreground">
+                        {calculateAge(pet.birthDate)} • Nacido el {formatDate(pet.birthDate)}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      Entregado
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Progreso de Vacunación</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Completado</span>
+                          <span>{vaccinationProgress}%</span>
+                        </div>
+                        <Progress value={vaccinationProgress} className="h-2" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Próxima Vacuna</h4>
+                      {nextVaccination ? (
+                        <div className="flex items-center gap-2">
+                          <Syringe className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{formatDate(nextVaccination.scheduledDate)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Al día</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
       </div>
 
       {/* Upcoming Vaccinations & Downloads */}
@@ -267,29 +307,52 @@ export default function ClientDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {upcomingVaccinations.map((vaccination) => (
-                <div key={vaccination.id} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      {getVaccinationStatusIcon(vaccination.status)}
-                      <p className="text-sm font-medium">
-                        {vaccination.vaccineName}
+            {vaccinationsLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="space-y-1 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            ) : upcomingVaccinations?.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">¡Al día con las vacunas!</h3>
+                <p className="text-sm text-muted-foreground text-center">
+                  No tienes vacunas pendientes próximamente.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {upcomingVaccinations?.map((vaccination: any) => (
+                  <div key={vaccination.id} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        {getVaccinationStatusIcon(vaccination.status)}
+                        <p className="text-sm font-medium">
+                          {vaccination.vaccine?.name}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {vaccination.vaccine?.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {vaccination.pet?.name} • {formatDate(vaccination.scheduledDate)}
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {vaccination.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(vaccination.scheduledDate)}
-                    </p>
+                    <div>
+                      {getVaccinationStatusBadge(vaccination.status)}
+                    </div>
                   </div>
-                  <div>
-                    {getVaccinationStatusBadge(vaccination.status)}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -306,22 +369,53 @@ export default function ClientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {availableDownloads.map((download) => (
-                <div key={download.id} className="flex items-center justify-between">
+              {clientData?.pets?.map((pet: any) => (
+                <div key={`care-guide-${pet.id}`} className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">
-                      {download.name}
+                      Guía de Cuidados - {pet.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {download.description}
+                      Guía completa de cuidados para {pet.breed?.name}
                     </p>
                   </div>
-                  <Button size="sm" variant="outline">
-                    <Download className="h-3 w-3 mr-1" />
-                    Descargar
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={`/api/downloads/care-guide?petId=${pet.id}`} target="_blank">
+                      <Download className="h-3 w-3 mr-1" />
+                      Descargar
+                    </a>
                   </Button>
                 </div>
               ))}
+              
+              {clientData?.invoices?.map((invoice: any) => (
+                <div key={`invoice-${invoice.id}`} className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      Factura {invoice.number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Factura de compra ({formatDate(invoice.issuedAt)})
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
+                      <Download className="h-3 w-3 mr-1" />
+                      Descargar
+                    </a>
+                  </Button>
+                </div>
+              ))}
+              
+              {(!clientData?.pets?.length && !clientData?.invoices?.length) && (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No hay documentos disponibles</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Los documentos aparecerán aquí cuando realices compras.
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -339,31 +433,57 @@ export default function ClientDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentInvoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">
-                    Factura {invoice.number}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Compra de {invoice.petName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(invoice.date)}
-                  </p>
+          {clientLoading ? (
+            <div className="space-y-4">
+              {[1].map((i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <p className="text-sm font-medium">
-                    {formatCurrency(invoice.amount)}
-                  </p>
-                  <Badge variant="outline">
-                    Pagado
-                  </Badge>
+              ))}
+            </div>
+          ) : clientData?.invoices?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No tienes facturas</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Tus facturas aparecerán aquí cuando realices compras.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {clientData?.invoices?.slice(0, 3).map((invoice: any) => (
+                <div key={invoice.id} className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      Factura {invoice.number}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Compra de {invoice.sale?.pet?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(invoice.issuedAt)}
+                    </p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <p className="text-sm font-medium">
+                      {formatCurrency(invoice.total)}
+                    </p>
+                    <Badge variant="outline">
+                      Pagado
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

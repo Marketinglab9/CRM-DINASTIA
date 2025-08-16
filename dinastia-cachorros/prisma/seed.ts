@@ -1,4 +1,4 @@
-import { PrismaClient, Role, Sex, PetStatus, InterestLevel, LeadStatus, BannerTarget, VaccinationStatus } from '@prisma/client'
+import { PrismaClient, Role, Sex, PetStatus, InterestLevel, LeadStatus, BannerTarget, VaccinationStatus, SaleStatus, PaymentStatusEnum, DeliveryMethod, DeliveryStatus } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -405,6 +405,92 @@ async function main() {
     }),
   ])
 
+  // Create sample sales and invoices for client demo
+  const sale1 = await prisma.sale.create({
+    data: {
+      clientId: clients[0].id, // Ana López
+      petId: pets[0].id, // Max (Golden Retriever)
+      advisorId: advisor1User.id,
+      price: 2500000, // 2.5M COP
+      saleDate: new Date('2024-02-15'),
+      status: SaleStatus.DELIVERED,
+      paymentStatus: PaymentStatusEnum.PAID,
+    },
+  })
+
+  const invoice1 = await prisma.invoice.create({
+    data: {
+      saleId: sale1.id,
+      number: 'DIN1001',
+      subtotal: 2100420, // 2.5M - IVA
+      taxes: 399580, // 19% IVA
+      total: 2500000,
+      issuedAt: new Date('2024-02-15'),
+      sentAt: new Date('2024-02-15'),
+      pdfUrl: '/invoices/DIN1001.pdf',
+    },
+  })
+
+  // Update sale with invoice reference
+  await prisma.sale.update({
+    where: { id: sale1.id },
+    data: { invoiceId: invoice1.id },
+  })
+
+  // Create delivery for the sale
+  const delivery1 = await prisma.delivery.create({
+    data: {
+      saleId: sale1.id,
+      estimatedDate: new Date('2024-02-20'),
+      method: DeliveryMethod.PICKUP,
+      status: DeliveryStatus.COMPLETED,
+      address: 'Calle 123 #45-67, Bogotá',
+      notes: 'Entrega exitosa. Cliente muy satisfecho.',
+    },
+  })
+
+  // Create pet vaccinations for the delivered pet
+  const petVaccinations = await Promise.all([
+    prisma.petVaccination.create({
+      data: {
+        petId: pets[0].id, // Max
+        vaccineId: vaccines[0].id, // First vaccine
+        scheduledDate: new Date('2024-03-01'),
+        status: VaccinationStatus.DONE,
+        completedDate: new Date('2024-03-01'),
+        notes: 'Primera vacuna aplicada correctamente',
+      },
+    }),
+    prisma.petVaccination.create({
+      data: {
+        petId: pets[0].id, // Max
+        vaccineId: vaccines[1].id, // Second vaccine
+        scheduledDate: new Date('2024-03-15'),
+        status: VaccinationStatus.DONE,
+        completedDate: new Date('2024-03-15'),
+        notes: 'Segunda dosis aplicada',
+      },
+    }),
+    prisma.petVaccination.create({
+      data: {
+        petId: pets[0].id, // Max
+        vaccineId: vaccines[2].id, // Third vaccine
+        scheduledDate: new Date('2024-04-01'),
+        status: VaccinationStatus.DUE,
+        notes: 'Próxima vacuna programada',
+      },
+    }),
+    prisma.petVaccination.create({
+      data: {
+        petId: pets[0].id, // Max
+        vaccineId: vaccines[3].id, // Fourth vaccine
+        scheduledDate: new Date('2024-12-25'),
+        status: VaccinationStatus.DUE,
+        notes: 'Refuerzo anual',
+      },
+    }),
+  ])
+
   // Create Banners
   const banners = await Promise.all([
     prisma.banner.create({
@@ -464,6 +550,8 @@ async function main() {
   console.log(`👥 Created ${leads.length} leads`)
   console.log(`💉 Created ${vaccines.length} vaccines`)
   console.log(`📢 Created ${banners.length} banners`)
+  console.log(`💰 Created 1 sale with invoice and delivery`)
+  console.log(`🏥 Created ${petVaccinations.length} pet vaccinations`)
 }
 
 main()
