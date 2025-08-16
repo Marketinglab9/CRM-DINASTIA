@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./prisma/dev.db"
 }
 
 // Enums
@@ -169,7 +169,7 @@ model Breed {
   name String @unique
 
   // Relations
-  pets        Pet[]
+  pets            Pet[]
   interestedLeads Lead[]
 
   createdAt DateTime @default(now())
@@ -191,10 +191,10 @@ model Pet {
   notes     String?
 
   // Relations
-  breed          Breed            @relation(fields: [breedId], references: [id])
-  reservations   Reservation[]
-  sales          Sale[]
-  vaccinations   PetVaccination[]
+  breed        Breed            @relation(fields: [breedId], references: [id])
+  reservations Reservation[]
+  sales        Sale[]
+  vaccinations PetVaccination[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,18 +205,18 @@ model Pet {
 }
 
 model Lead {
-  id               String        @id @default(cuid())
-  name             String
-  email            String
-  phone            String
-  city             String?
-  source           String?
-  interestBreedId  String?
-  interestLevel    InterestLevel @default(COLD)
-  status           LeadStatus    @default(NEW)
-  nextContactAt    DateTime?
-  advisorId        String
-  notes            String?
+  id              String        @id @default(cuid())
+  name            String
+  email           String
+  phone           String
+  city            String?
+  source          String?
+  interestBreedId String?
+  interestLevel   InterestLevel @default(COLD)
+  status          LeadStatus    @default(NEW)
+  nextContactAt   DateTime?
+  advisorId       String
+  notes           String?
 
   // Relations
   interestBreed Breed?        @relation(fields: [interestBreedId], references: [id])
@@ -308,8 +308,8 @@ model Delivery {
 }
 
 model Vaccine {
-  id          String @id @default(cuid())
-  name        String @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
   offsetWeeks Int // weeks from birth for first reminder
 
@@ -345,15 +345,15 @@ model PetVaccination {
 }
 
 model Invoice {
-  id        String    @id @default(cuid())
-  saleId    String    @unique
-  number    String    @unique
-  pdfUrl    String?
-  subtotal  Decimal
-  taxes     Decimal
-  total     Decimal
-  issuedAt  DateTime  @default(now())
-  sentAt    DateTime?
+  id       String    @id @default(cuid())
+  saleId   String    @unique
+  number   String    @unique
+  pdfUrl   String?
+  subtotal Decimal
+  taxes    Decimal
+  total    Decimal
+  issuedAt DateTime  @default(now())
+  sentAt   DateTime?
 
   // Relations
   sales Sale[]
@@ -365,12 +365,12 @@ model Invoice {
 }
 
 model Payment {
-  id             String              @id @default(cuid())
+  id             String            @id @default(cuid())
   saleId         String?
   reservationId  String?
   amount         Decimal
   method         PaymentMethod
-  status         PaymentStatusEnum   @default(PENDING)
+  status         PaymentStatusEnum @default(PENDING)
   transactionRef String?
   paidAt         DateTime?
 
@@ -422,7 +422,7 @@ model Notification {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   actorId    String
   action     String
   entityType String
