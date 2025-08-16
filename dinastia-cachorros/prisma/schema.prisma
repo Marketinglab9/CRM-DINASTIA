@@ -15,6 +15,7 @@ enum Role {
   ADMIN
   ADVISOR
   CLIENT
+  TEAM_LEAD
 }
 
 enum Sex {
@@ -120,24 +121,27 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  advisor       Advisor?
-  client        Client?
-  leads         Lead[]
-  reservations  Reservation[]
-  sales         Sale[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  advisor         Advisor?
+  client          Client?
+  leads           Lead[]
+  reservations    Reservation[]
+  sales           Sale[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  managedAdvisors Advisor[] @relation("AdvisorTeamLead")
 
   @@map("users")
 }
 
 model Advisor {
-  id     String @id @default(cuid())
-  userId String @unique
-  code   String @unique
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  code       String  @unique
+  teamLeadId String?
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamLead User? @relation("AdvisorTeamLead", fields: [teamLeadId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

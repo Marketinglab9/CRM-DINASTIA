@@ -26,6 +26,7 @@ import {
   MessageSquare,
   Package,
   Settings,
+  Shield,
   Truck,
   Users,
   UserCheck,
@@ -86,6 +87,12 @@ const navItems: NavItem[] = [
     title: 'Banners',
     href: '/dashboard/banners',
     icon: Megaphone,
+    adminOnly: true,
+  },
+  {
+    title: 'Asignaciones',
+    href: '/dashboard/team-assignments',
+    icon: Shield,
     adminOnly: true,
   },
   {

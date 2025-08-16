@@ -56,6 +56,35 @@ async function main() {
     },
   })
 
+  // Create Team Lead Users
+  const teamLead1User = await prisma.user.create({
+    data: {
+      name: 'Patricia Morales',
+      email: 'patricia@dinastiacachorros.com',
+      phone: '+57 300 123 4567',
+      role: Role.TEAM_LEAD,
+      passwordHash: await hash('teamlead123', 12),
+      isActive: true,
+    },
+  })
+
+  const teamLead2User = await prisma.user.create({
+    data: {
+      name: 'Roberto Silva',
+      email: 'roberto@dinastiacachorros.com',
+      phone: '+57 300 987 6543',
+      role: Role.TEAM_LEAD,
+      passwordHash: await hash('teamlead123', 12),
+      isActive: true,
+    },
+  })
+
+  // Assign advisor1 to teamLead1
+  await prisma.advisor.update({
+    where: { id: advisor1.id },
+    data: { teamLeadId: teamLead1User.id },
+  })
+
   // Create Client Users
   const clientUsers = await Promise.all([
     prisma.user.create({
@@ -544,6 +573,8 @@ async function main() {
   console.log(`📧 Admin user: admin@dinastiacachorros.com / admin123`)
   console.log(`📧 Advisor 1: maria@dinastiacachorros.com / advisor123`)
   console.log(`📧 Advisor 2: carlos@dinastiacachorros.com / advisor123`)
+  console.log(`📧 Team Lead 1: patricia@dinastiacachorros.com / teamlead123`)
+  console.log(`📧 Team Lead 2: roberto@dinastiacachorros.com / teamlead123`)
   console.log(`📧 Client example: ana.lopez@email.com / client123`)
   console.log(`🐕 Created ${breeds.length} breeds`)
   console.log(`🐶 Created ${pets.length} pets`)
@@ -552,6 +583,7 @@ async function main() {
   console.log(`📢 Created ${banners.length} banners`)
   console.log(`💰 Created 1 sale with invoice and delivery`)
   console.log(`🏥 Created ${petVaccinations.length} pet vaccinations`)
+  console.log(`👥 Created 2 team leads with 1 advisor assignment`)
 }
 
 main()
